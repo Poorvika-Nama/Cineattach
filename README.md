@@ -15,7 +15,14 @@ CineAttach is an end-to-end machine learning web app. You enter a movie name, yo
 
 It was built on a real survey dataset of **10,000 responses** across **269 films**, covering the full data science workflow from raw data to a deployed Flask dashboard.
 
----
+---<img width="1897" height="869" alt="Screenshot 2026-03-23 163950" src="https://github.com/user-attachments/assets/9ded9b47-6579-4af9-8642-c4d3641e3912" />
+
+<img width="1333" height="875" alt="Screenshot 2026-03-23 164011" src="https://github.com/user-attachments/assets/f15e4cab-5639-4573-86ef-78269fdc67e4" />
+
+<img width="1154" height="875" alt="Screenshot 2026-03-23 164026" src="https://github.com/user-attachments/assets/a8a6b059-f300-43fe-b976-a9814a39d731" />
+
+
+
 
 ## How to Run
 
