@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>CineAttach — Emotional Attachment Predictor</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0d0d12;--bg2:#13131a;--bg3:#1a1a24;
+  --border:rgba(255,255,255,0.07);--border2:rgba(255,255,255,0.14);
+  --text:#e8e6f0;--muted:#7a788a;--gold:#c9a96e;
+  --radius:14px;--radius-sm:8px;
+}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+.page{max-width:720px;margin:0 auto;padding:3.5rem 1.5rem 5rem}
+
+header{text-align:center;margin-bottom:3rem;animation:fadeUp .6s ease both}
+.brand{display:inline-flex;align-items:center;gap:8px;font-family:'Playfair Display',serif;
+  font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--gold);margin-bottom:1rem}
+.dot{width:4px;height:4px;border-radius:50%;background:var(--gold)}
+header h1{font-family:'Playfair Display',serif;font-size:clamp(2rem,5vw,3.2rem);font-weight:700;
+  line-height:1.15;margin-bottom:.8rem;
+  background:linear-gradient(135deg,#e8e6f0 30%,var(--gold));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+header p{color:var(--muted);font-size:14px;max-width:420px;margin:0 auto;line-height:1.7}
+
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);
+  padding:2rem 2.2rem;margin-bottom:1.2rem;animation:fadeUp .6s ease both}
+.card:nth-child(2){animation-delay:.05s}.card:nth-child(3){animation-delay:.1s}
+
+.sec{font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--gold);
+  font-weight:500;margin-bottom:1.4rem;display:flex;align-items:center;gap:8px}
+.sec::after{content:'';flex:1;height:1px;background:var(--border)}
+
+.field{display:flex;flex-direction:column;gap:7px;margin-bottom:1rem}
+.field:last-child{margin-bottom:0}
+.field label{font-size:12px;color:var(--muted)}
+.field input[type=text]{width:100%;padding:12px 16px;background:var(--bg3);
+  border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);
+  font-family:'DM Sans',sans-serif;font-size:14px;outline:none;transition:border-color .2s}
+.field input[type=text]:focus{border-color:var(--border2)}
+.field input[type=text]::placeholder{color:var(--muted)}
+
+.badge{display:none;font-size:11px;padding:4px 12px;border-radius:100px;width:fit-content;margin-top:2px}
+.badge.known{display:inline-block;background:rgba(29,158,117,.15);color:#1D9E75}
+.badge.unknown{display:inline-block;background:rgba(239,159,39,.15);color:#EF9F27}
+
+.pills{display:flex;flex-wrap:wrap;gap:8px}
+.pills input[type=radio]{display:none}
+.pills label{padding:8px 18px;border:1px solid var(--border);border-radius:100px;
+  font-size:13px;color:var(--muted);cursor:pointer;transition:all .15s;background:var(--bg3)}
+.pills label:hover{border-color:var(--gold);color:var(--gold)}
+.pills input[type=radio]:checked+label{background:var(--gold);border-color:var(--gold);
+  color:#0d0d12;font-weight:500}
+
+.submit-wrap{text-align:center;margin-top:.5rem}
+button[type=submit]{padding:13px 48px;background:var(--gold);color:#0d0d12;border:none;
+  border-radius:100px;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:500;
+  letter-spacing:.04em;cursor:pointer;transition:all .2s}
+button[type=submit]:hover{transform:translateY(-2px);box-shadow:0 8px 26px rgba(201,169,110,.3)}
+button[type=submit].loading{pointer-events:none;opacity:.7}
+.error-msg{background:rgba(226,75,74,.1);border:1px solid rgba(226,75,74,.3);
+  border-radius:var(--radius-sm);padding:11px 15px;font-size:12px;
+  color:#f09595;margin-top:1rem;display:none}
+.error-msg.show{display:block}
+
+/* ── Result ── */
+#result{display:none;animation:fadeUp .5s ease both}
+#result.show{display:block}
+.result-card{background:var(--bg2);border:1px solid var(--border);
+  border-radius:var(--radius);padding:2.5rem 2.2rem}
+
+/* Score hero */
+.score-hero{text-align:center;margin-bottom:2rem}
+.r-movie{font-family:'Playfair Display',serif;font-style:italic;
+  font-size:15px;color:var(--muted);margin-bottom:.5rem}
+.r-tag{font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--gold)}
+.big-score{font-family:'Playfair Display',serif;
+  font-size:clamp(4rem,12vw,6rem);font-weight:700;line-height:1;
+  margin:.3rem 0 .2rem;transition:color .4s}
+.out-of{font-size:13px;color:var(--muted);margin-bottom:.8rem}
+.score-badge{display:inline-block;padding:5px 18px;border-radius:100px;
+  font-size:12px;font-weight:500;margin-bottom:2rem}
+
+.prog-wrap{max-width:400px;margin:0 auto 1.5rem}
+.prog-labels{display:flex;justify-content:space-between;font-size:10px;color:var(--muted);margin-bottom:7px}
+.prog-track{height:5px;background:var(--bg3);border-radius:100px;overflow:hidden}
+.prog-fill{height:100%;border-radius:100px;width:0%;
+  transition:width 1s cubic-bezier(.16,1,.3,1)}
+
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:.8rem;
+  max-width:420px;margin:0 auto}
+.stat{background:var(--bg3);border:1px solid var(--border);
+  border-radius:var(--radius-sm);padding:.9rem;text-align:center}
+.stat .val{font-family:'Playfair Display',serif;font-size:20px;font-weight:700;margin-bottom:3px}
+.stat .desc{font-size:10px;color:var(--muted);line-height:1.4}
+
+/* ── Charts ── */
+.divider{height:1px;background:var(--border);margin:2rem 0}
+
+.chart-block{margin-bottom:2rem}
+.chart-block:last-child{margin-bottom:0}
+.chart-header{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:1rem}
+.chart-title{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.chart-insight{font-size:11px;color:var(--gold)}
+.chart-wrap{position:relative;width:100%}
+.chart-wrap.h180{height:180px}
+.chart-wrap.h200{height:200px}
+.chart-wrap.h160{height:160px}
+
+.note{font-size:11px;color:var(--muted);margin-top:1.6rem;line-height:1.6;
+  padding:.8rem 1rem;background:var(--bg3);border-radius:var(--radius-sm)}
+
+.reset{display:block;text-align:center;margin-top:1.2rem;font-size:12px;
+  color:var(--muted);cursor:pointer;text-decoration:underline;
+  text-underline-offset:3px;transition:color .2s}
+.reset:hover{color:var(--text)}
+
+footer{text-align:center;margin-top:4rem;font-size:11px;color:var(--muted);line-height:1.9}
+@keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header>
+    <div class="brand"><span class="dot"></span>Emotional Intelligence Lab<span class="dot"></span></div>
+    <h1>How attached will you<br><em>feel to this film?</em></h1>
+    <p>Enter a movie name, your age and gender.</p>
+  </header>
+
+  <form id="form">
+    <div class="card">
+      <div class="sec">Movie</div>
+      <div class="field">
+        <label>Movie or book name</label>
+        <input type="text" name="movie_name" id="movie-input"
+               list="movie-list" placeholder="e.g. Forrest Gump, Interstellar…"
+               autocomplete="off" required/>
+        <datalist id="movie-list">
+          {% for m in movies %}<option value="{{ m }}">{% endfor %}
+        </datalist>
+        <span class="badge" id="badge"></span>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="sec">About you</div>
+      <div class="field">
+        <label>Age group</label>
+        <div class="pills">
+          <input type="radio" name="age" id="a1" value="Under 18" required>
+          <label for="a1">Under 18</label>
+          <input type="radio" name="age" id="a2" value="18–20">
+          <label for="a2">18–20</label>
+          <input type="radio" name="age" id="a3" value="21–23">
+          <label for="a3">21–23</label>
+          <input type="radio" name="age" id="a4" value="24 or above">
+          <label for="a4">24 or above</label>
+        </div>
+      </div>
+      <div class="field">
+        <label>Gender</label>
+        <div class="pills">
+          <input type="radio" name="gender" id="g1" value="Female" required>
+          <label for="g1">Female</label>
+          <input type="radio" name="gender" id="g2" value="Male">
+          <label for="g2">Male</label>
+          <input type="radio" name="gender" id="g3" value="Prefer not to say">
+          <label for="g3">Prefer not to say</label>
+        </div>
+      </div>
+    </div>
+
+    <div class="submit-wrap">
+      <button type="submit" id="btn">Predict Attachment Score</button>
+      <div class="error-msg" id="err"></div>
+    </div>
+  </form>
+
+  <!-- ── Result ── -->
+  <div id="result">
+    <div class="result-card">
+
+      <!-- Score hero -->
+      <div class="score-hero">
+        <div class="r-movie" id="r-movie"></div>
+        <div class="r-tag">Your predicted attachment score</div>
+        <div class="big-score" id="r-score">—</div>
+        <div class="out-of">out of 5.0</div>
+        <div class="score-badge" id="r-label">—</div>
+        <div class="prog-wrap">
+          <div class="prog-labels">
+            <span>1.0 — No attachment</span>
+            <span>5.0 — Very high</span>
+          </div>
+          <div class="prog-track">
+            <div class="prog-fill" id="r-fill"></div>
+          </div>
+        </div>
+        <div class="stats">
+          <div class="stat">
+            <div class="val" id="s-score">—</div>
+            <div class="desc">Predicted<br>score</div>
+          </div>
+          <div class="stat">
+            <div class="val" id="s-story">—</div>
+            <div class="desc">Storytelling<br>quality</div>
+          </div>
+          <div class="stat">
+            <div class="val" id="s-rank">—</div>
+            <div class="desc">Higher than<br>X% of viewers</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="divider"></div>
+
+      <!-- Chart 1: Score by age group -->
+      <div class="chart-block">
+        <div class="chart-header">
+          <span class="chart-title">How your score compares across age groups</span>
+          <span class="chart-insight" id="age-insight"></span>
+        </div>
+        <div class="chart-wrap h180">
+          <canvas id="chart-age"></canvas>
+        </div>
+      </div>
+
+      <div class="divider"></div>
+
+      <!-- Chart 2: Score by gender -->
+      <div class="chart-block">
+        <div class="chart-header">
+          <span class="chart-title">How your score compares across genders</span>
+          <span class="chart-insight" id="gender-insight"></span>
+        </div>
+        <div class="chart-wrap h160">
+          <canvas id="chart-gender"></canvas>
+        </div>
+      </div>
+
+      <div class="divider"></div>
+
+      <!-- Chart 3: Score distribution -->
+      <div class="chart-block">
+        <div class="chart-header">
+          <span class="chart-title">Where your score sits in the full survey</span>
+          <span class="chart-insight" id="dist-insight"></span>
+        </div>
+        <div class="chart-wrap h200">
+          <canvas id="chart-dist"></canvas>
+        </div>
+      </div>
+
+      <div class="note" id="r-note"></div>
+    </div>
+    <span class="reset" id="reset">&#8592; Try another movie</span>
+  </div>
+
+  <footer>
+    Movie vs Emotional Attachment Survey 2024–2026<br>
+  </footer>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>
+const KNOWN = new Set({{ movies | tojson }});
+const inp   = document.getElementById('movie-input');
+const badge = document.getElementById('badge');
+
+inp.addEventListener('input', () => {
+  const v = inp.value.trim();
+  if (!v) { badge.className = 'badge'; return; }
+  badge.className     = KNOWN.has(v) ? 'badge known' : 'badge unknown';
+  badge.textContent   = KNOWN.has(v)
+    ? 'In our dataset — using actual survey averages'
+    : 'Not in dataset — using overall survey averages';
+});
+
+// ── Chart helpers ──────────────────────────────────────────
+const charts = {};
+
+function makeBarChart(id, labels, values, highlightIdx, mainColor, yMin, yMax) {
+  if (charts[id]) { charts[id].destroy(); }
+  const bg = labels.map((_, i) =>
+    i === highlightIdx ? mainColor : mainColor + '40');
+  const border = labels.map((_, i) =>
+    i === highlightIdx ? mainColor : 'transparent');
+
+  charts[id] = new Chart(document.getElementById(id), {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{
+        data: values,
+        backgroundColor: bg,
+        borderColor: border,
+        borderWidth: 2,
+        borderRadius: 6,
+        borderSkipped: false,
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: ctx => ` Score: ${ctx.parsed.y.toFixed(2)}`
+          }
+        }
+      },
+      scales: {
+        x: {
+          grid: { display: false },
+          ticks: { color: '#7a788a', font: { size: 11 } }
+        },
+        y: {
+          min: yMin, max: yMax,
+          grid: { color: 'rgba(255,255,255,0.05)' },
+          ticks: { color: '#7a788a', font: { size: 11 },
+            callback: v => v.toFixed(2) }
+        }
+      }
+    }
+  });
+}
+
+function makeDistChart(id, labels, values, highlightIdx, mainColor) {
+  if (charts[id]) { charts[id].destroy(); }
+  const bg = values.map((_, i) =>
+    i === highlightIdx ? mainColor : mainColor + '35');
+
+  charts[id] = new Chart(document.getElementById(id), {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{
+        data: values,
+        backgroundColor: bg,
+        borderRadius: 4,
+        borderSkipped: false,
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            title: ctx => `Score range: ${ctx[0].label}`,
+            label: ctx => ` ${ctx.parsed.y.toLocaleString()} respondents`
+          }
+        }
+      },
+      scales: {
+        x: {
+          grid: { display: false },
+          ticks: { color: '#7a788a', font: { size: 11 } }
+        },
+        y: {
+          grid: { color: 'rgba(255,255,255,0.05)' },
+          ticks: {
+            color: '#7a788a', font: { size: 10 },
+            callback: v => v >= 1000 ? (v/1000).toFixed(1)+'k' : v
+          }
+        }
+      }
+    }
+  });
+}
+
+// ── Insight text ───────────────────────────────────────────
+function ageInsight(values, labels, highlightIdx, score) {
+  const max     = Math.max(...values);
+  const min     = Math.min(...values);
+  const maxAge  = labels[values.indexOf(max)];
+  const spread  = (max - min).toFixed(2);
+  const myVal   = values[highlightIdx].toFixed(2);
+  return `${labels[highlightIdx]}: ${myVal} · range ${spread}`;
+}
+
+function genderInsight(values, labels, highlightIdx) {
+  const myVal = values[highlightIdx].toFixed(2);
+  const max   = Math.max(...values);
+  const maxG  = labels[values.indexOf(max)];
+  return `${labels[highlightIdx]}: ${myVal} · highest: ${maxG}`;
+}
+
+function distInsight(pctRank) {
+  return `Higher than ${pctRank}% of all respondents`;
+}
+
+// ── Y-axis padding helper ──────────────────────────────────
+function yRange(values, pad) {
+  const mn = Math.min(...values);
+  const mx = Math.max(...values);
+  return [
+    Math.max(1, parseFloat((mn - pad).toFixed(2))),
+    Math.min(5, parseFloat((mx + pad).toFixed(2)))
+  ];
+}
+
+// ── Form submit ────────────────────────────────────────────
+const form   = document.getElementById('form');
+const btn    = document.getElementById('btn');
+const result = document.getElementById('result');
+const err    = document.getElementById('err');
+
+form.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  err.classList.remove('show');
+  btn.textContent = 'Predicting…';
+  btn.classList.add('loading');
+
+  try {
+    const res  = await fetch('/predict', { method:'POST', body:new FormData(form) });
+    const json = await res.json();
+    if (json.error) throw new Error(json.error);
+
+    const c = json.color;
+
+    // Hero section
+    document.getElementById('r-movie').textContent =
+      json.movie_name !== 'Your movie' ? '\u201C' + json.movie_name + '\u201D' : '';
+    document.getElementById('r-score').textContent = json.score.toFixed(2);
+    document.getElementById('r-score').style.color = c;
+    document.getElementById('r-label').textContent       = json.label;
+    document.getElementById('r-label').style.background  = c + '22';
+    document.getElementById('r-label').style.color       = c;
+
+    const fill = document.getElementById('r-fill');
+    fill.style.background = c;
+    setTimeout(() => { fill.style.width = json.percent + '%'; }, 100);
+
+    document.getElementById('s-score').textContent = json.score.toFixed(2);
+    document.getElementById('s-score').style.color = c;
+    document.getElementById('s-story').textContent = json.emotion_score.toFixed(2);
+    document.getElementById('s-rank').textContent  = json.pct_rank.toFixed(0) + '%';
+
+    // Note
+    document.getElementById('r-note').textContent = json.known_movie
+      ? `Storytelling ratings auto-filled from ${json.popularity} survey respondents who watched this movie. Age and gender shift the score based on real demographic patterns in the dataset.`
+      : 'Movie not found in the dataset — overall survey averages were used for storytelling ratings. Age and gender still affect your personalised prediction.';
+
+    // Show result first, then draw charts
+    form.style.display = 'none';
+    result.classList.add('show');
+    result.scrollIntoView({ behavior:'smooth', block:'start' });
+
+    setTimeout(() => {
+      // Chart 1: age
+      const av = json.age_chart;
+      const [ayMin, ayMax] = yRange(av.values, 0.1);
+      makeBarChart('chart-age', av.labels, av.values, av.highlight, c, ayMin, ayMax);
+      document.getElementById('age-insight').textContent =
+        ageInsight(av.values, av.labels, av.highlight, json.score);
+
+      // Chart 2: gender
+      const gv = json.gender_chart;
+      const [gyMin, gyMax] = yRange(gv.values, 0.08);
+      makeBarChart('chart-gender', gv.labels, gv.values, gv.highlight, c, gyMin, gyMax);
+      document.getElementById('gender-insight').textContent =
+        genderInsight(gv.values, gv.labels, gv.highlight);
+
+      // Chart 3: distribution
+      const dv = json.dist_chart;
+      makeDistChart('chart-dist', dv.labels, dv.values, dv.highlight, c);
+      document.getElementById('dist-insight').textContent =
+        distInsight(json.pct_rank);
+    }, 300);
+
+  } catch(e) {
+    err.textContent = 'Error: ' + e.message;
+    err.classList.add('show');
+  } finally {
+    btn.textContent = 'Predict Attachment Score';
+    btn.classList.remove('loading');
+  }
+});
+
+document.getElementById('reset').addEventListener('click', () => {
+  form.reset(); form.style.display = '';
+  result.classList.remove('show');
+  document.getElementById('r-fill').style.width = '0%';
+  badge.className = 'badge';
+  Object.values(charts).forEach(ch => ch.destroy());
+  Object.keys(charts).forEach(k => delete charts[k]);
+  window.scrollTo({ top:0, behavior:'smooth' });
+});
+</script>
+</body>
+</html>
